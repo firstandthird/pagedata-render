@@ -1,5 +1,5 @@
 {
-  "name": "@firstandthird/pagedata-render",
+  "name": "pagedata-render",
   "version": "0.0.1",
   "description": "Render pagedata data as pages",
   "scripts": {
@@ -18,7 +18,7 @@
   "dependencies": {
     "async": "^2.5.0",
     "nunjucks": "^3.0.1",
-    "wreck": "^12.2.3"
+    "pagedata-api": "^1.0.0"
   },
   "devDependencies": {
     "eslint": "^3.9.1",

@@ -3,15 +3,16 @@ const PagedataRenderer = require('../index.js');
 const path = require('path');
 const async = require('async');
 const Hapi = require('hapi');
+const PageData = require('pagedata-api');
 
 const templateFile = path.join(__dirname, 'fixture', 'page1.njk');
 
 tap.test('can initiate the class', (t) => {
   const pr = new PagedataRenderer('apiKey', { host: 'http://localhost:8081', userAgent: 'pagedataRenderer/1' });
   t.equal(pr instanceof PagedataRenderer, true);
-  t.equal(pr.key, 'apiKey');
   t.equal(pr.options.host, 'http://localhost:8081');
   t.equal(pr.options.userAgent, 'pagedataRenderer/1');
+  t.equal(pr.pagedata instanceof PageData, true);
   t.end();
 });
 
@@ -34,7 +35,7 @@ tap.test('renderPage', (t) => {
         port: 8081
       });
       server.route({
-        path: '/page/slug',
+        path: '/api/pages/page-slug',
         method: 'get',
         handler(request, reply) {
           return reply(null, { text: 'Hello World' });
@@ -43,7 +44,7 @@ tap.test('renderPage', (t) => {
       server.start(() => done(null, server));
     },
     call(server, done) {
-      pr.renderPage('/page/slug', templateFile, (err, result) => {
+      pr.renderPage('page-slug', templateFile, (err, result) => {
         t.equal(err, null);
         t.notEqual(result.indexOf('Hello World'), -1);
         done();

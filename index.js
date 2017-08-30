@@ -1,13 +1,13 @@
 const nunjucks = require('nunjucks');
 const async = require('async');
 const fs = require('fs');
-const wreck = require('wreck');
+const PageData = require('pagedata-api');
 
 class PagedataRenderer {
   constructor(key, options) {
-    this.key = key;
     this.options = options;
-    // options = { host: 'https://app.pagedata.co', userAgent: 'pagedataRenderer/{version}' }
+    this.userAgent = options.userAgent || `pagedataRenderer/${require('./package.json').version}`;
+    this.pagedata = new PageData(options.host, key, this.userAgent);
   }
 
   render(filePath, data, allDone) {
@@ -32,20 +32,14 @@ class PagedataRenderer {
   }
 
   renderPage(pageSlug, templateFile, allDone) {
-    const key = this.options.key;
-    const host = this.options.host;
     const render = this.render.bind(this);
+    const pagedata = this.pagedata;
     async.autoInject({
-      pagedata(done) {
-        wreck.get(`${host}${pageSlug}?token=${key}`, { json: true }, (err, res, payload) => {
-          if (err) {
-            return done(err);
-          }
-          return done(null, payload);
-        });
+      page(done) {
+        pagedata.getPage(pageSlug, done);
       },
-      render(pagedata, done) {
-        render(templateFile, { content: pagedata }, done);
+      render(page, done) {
+        render(templateFile, { content: page }, done);
       },
     }, (err, result) => {
       if (err) {
