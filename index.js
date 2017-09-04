@@ -1,7 +1,7 @@
 const nunjucks = require('nunjucks');
 const async = require('async');
 const fs = require('fs');
-const PageData = require('pagedata-api');
+const PageData = require('pagedata');
 
 class PagedataRenderer {
   constructor(key, options) {

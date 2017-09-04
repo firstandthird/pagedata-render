@@ -3,7 +3,7 @@ const PagedataRenderer = require('../index.js');
 const path = require('path');
 const async = require('async');
 const Hapi = require('hapi');
-const PageData = require('pagedata-api');
+const PageData = require('pagedata');
 
 const templateFile = path.join(__dirname, 'fixture', 'page1.njk');
 
