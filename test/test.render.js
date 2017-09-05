@@ -81,7 +81,6 @@ tap.test('renderCollection', (t) => {
     call(server, done) {
       pr.renderCollection('collection-slug', templateFile, (err, result) => {
         t.equal(err, null);
-        console.log(result)
         t.notEqual(result['page1-slug'].indexOf('Hello World 1'), -1);
         t.notEqual(result['page2-slug'].indexOf('Hello World 2'), -1);
         done();
