@@ -38,7 +38,7 @@ tap.test('renderPage', (t) => {
         path: '/api/pages/page-slug',
         method: 'get',
         handler(request, reply) {
-          return reply(null, { text: 'Hello World' });
+          return reply(null, { content: { text: 'Hello World' } });
         }
       });
       server.start(() => done(null, server));

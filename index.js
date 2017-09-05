@@ -40,7 +40,7 @@ class PagedataRenderer {
         pagedata.getPage(pageSlug, done);
       },
       render(page, done) {
-        render(templateFile, { content: page }, done);
+        render(templateFile, { content: page.content }, done);
       },
     }, (err, result) => {
       if (err) {
