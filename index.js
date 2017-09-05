@@ -48,6 +48,36 @@ class PagedataRenderer {
       return allDone(null, result.render);
     });
   }
+
+  renderCollection(collectionSlug, templateFile, allDone) {
+    const render = this.render.bind(this);
+    const pagedata = this.pagedata;
+    async.autoInject({
+      childPages(done) {
+        pagedata.getPages({ parentPageSlug: collectionSlug }, done);
+      },
+      renderAll(childPages, done) {
+        async.each(childPages, (page, eachDone) => {
+          render(templateFile, { content: page }, (err, html) => {
+            if (err) {
+              return eachDone(err);
+            }
+            page.html = html;
+            return eachDone();
+          });
+        }, done);
+      }
+    }, (err, result) => {
+      if (err) {
+        return allDone(err);
+      }
+      const reduction = {};
+      result.childPages.forEach((page) => {
+        reduction[page.slug] = page.html;
+      });
+      return allDone(null, reduction);
+    });
+  }
 }
 
 module.exports = PagedataRenderer;
