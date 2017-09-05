@@ -2,6 +2,7 @@ const nunjucks = require('nunjucks');
 const async = require('async');
 const fs = require('fs');
 const PageData = require('pagedata');
+const objoin = require('objoin');
 
 class PagedataRenderer {
   constructor(key, options) {
@@ -54,30 +55,22 @@ class PagedataRenderer {
     const pagedata = this.pagedata;
     async.autoInject({
       childPages(done) {
-        pagedata.getPages({ parentPageSlug: collectionSlug }, done);
+        pagedata.getPages({ parentPageSlug: collectionSlug, populate: 'content' }, done);
       },
       renderAll(childPages, done) {
-        const reduction = {};
-        async.each(childPages, (page, eachDone) => {
-          render(templateFile, { content: page }, (err, html) => {
-            if (err) {
-              return eachDone(err);
-            }
-            reduction[page.slug] = html;
-            return eachDone();
-          });
-        }, (err) => {
-          if (err) {
-            return done(err);
-          }
-          return done(null, reduction);
-        });
-      }
+        objoin(childPages, { key: 'content', set: 'html' }, (content, next) => {
+          render(templateFile, { content }, next);
+        }, done);
+      },
     }, (err, result) => {
       if (err) {
         return allDone(err);
       }
-      return allDone(null, result.renderAll);
+      const reduction = {};
+      result.childPages.forEach((page) => {
+        reduction[page.slug] = page.html;
+      });
+      return allDone(null, reduction);
     });
   }
 }

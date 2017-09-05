@@ -70,9 +70,10 @@ tap.test('renderCollection', (t) => {
         method: 'get',
         handler(request, reply) {
           t.equal(request.query.parentPageSlug, 'collection-slug');
+          t.equal(request.query.populate, 'content');
           return reply(null, [
-            { slug: 'page1-slug', text: 'Hello World 1' },
-            { slug: 'page2-slug', text: 'Hello World 2' },
+            { slug: 'page1-slug', content: { text: 'Hello World 1' } },
+            { slug: 'page2-slug', content: { text: 'Hello World 2' } },
           ]);
         }
       });
