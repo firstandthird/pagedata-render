@@ -38,7 +38,7 @@ tap.test('renderPage', (t) => {
         path: '/api/pages/page-slug',
         method: 'get',
         handler(request, reply) {
-          return reply(null, { text: 'Hello World' });
+          return reply(null, { content: { text: 'Hello World' } });
         }
       });
       server.start(() => done(null, server));
@@ -47,6 +47,43 @@ tap.test('renderPage', (t) => {
       pr.renderPage('page-slug', templateFile, (err, result) => {
         t.equal(err, null);
         t.notEqual(result.indexOf('Hello World'), -1);
+        done();
+      });
+    },
+    stop(server, call, done) {
+      server.stop(done);
+    }
+  }, t.end);
+});
+
+tap.test('renderCollection', (t) => {
+  const pr = new PagedataRenderer('apiKey', { path: __dirname, host: 'http://localhost:8081' });
+  async.autoInject({
+    server(done) {
+      const server = new Hapi.Server();
+      server.connection({
+        host: 'localhost',
+        port: 8081
+      });
+      server.route({
+        path: '/api/pages',
+        method: 'get',
+        handler(request, reply) {
+          t.equal(request.query.parentPageSlug, 'collection-slug');
+          t.equal(request.query.populate, 'content');
+          return reply(null, [
+            { slug: 'page1-slug', content: { text: 'Hello World 1' } },
+            { slug: 'page2-slug', content: { text: 'Hello World 2' } },
+          ]);
+        }
+      });
+      server.start(() => done(null, server));
+    },
+    call(server, done) {
+      pr.renderCollection('collection-slug', templateFile, (err, result) => {
+        t.equal(err, null);
+        t.notEqual(result['page1-slug'].indexOf('Hello World 1'), -1);
+        t.notEqual(result['page2-slug'].indexOf('Hello World 2'), -1);
         done();
       });
     },
