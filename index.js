@@ -3,6 +3,8 @@ const async = require('async');
 const fs = require('fs');
 const PageData = require('pagedata');
 const objoin = require('objoin');
+const path = require('path');
+const mkdirp = require('mkdirp');
 
 class PagedataRenderer {
   constructor(key, options) {
@@ -72,6 +74,48 @@ class PagedataRenderer {
       });
       return allDone(null, reduction);
     });
+  }
+
+  renderAndSave(projectSlug, templatePath, outputPath, allDone) {
+    const render = this.render.bind(this);
+    const pagedata = this.pagedata;
+    async.autoInject({
+      childPages(done) {
+        pagedata.getPages({ projectSlug, populate: 'content' }, done);
+      },
+      inputPaths(childPages, done) {
+        objoin(childPages, { key: 'slug', set: 'inputPath' }, (slug, next) => {
+          const root = slug.replace(`${projectSlug}-`, '');
+          const templateFile = path.join(templatePath, `${root}.njk`);
+          return next(null, templateFile);
+        }, done);
+      },
+      outputPaths(childPages, done) {
+        objoin(childPages, { key: 'slug', set: 'outputPath' }, (slug, next) => {
+          const outputFile = (slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
+            path.join(outputPath, slug.replace(`${projectSlug}-`, ''), 'index.html');
+          return next(null, outputFile);
+        }, done);
+      },
+      mkdirs(outputPaths, childPages, done) {
+        async.eachSeries(childPages, (page, eachDone) => {
+          if (page.outputPath === path.join(outputPath, 'index.html')) {
+            return mkdirp(outputPath, {}, eachDone);
+          }
+          mkdirp(path.dirname(page.outputPath), {}, eachDone);
+        }, done);
+      },
+      renderAll(inputPaths, outputPaths, mkdirs, childPages, done) {
+        async.eachSeries(childPages, (page, eachDone) => {
+          render(page.inputPath, { content: page.content }, (err, htmlString) => {
+            if (err) {
+              return eachDone(err);
+            }
+            fs.writeFile(page.outputPath, htmlString, eachDone);
+          });
+        }, done);
+      },
+    }, allDone);
   }
 }
 
