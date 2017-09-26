@@ -107,14 +107,17 @@ class PagedataRenderer {
       async.eachSeries(childPages, (page, eachDone) => {
         // skip collections for now:
         if (page.type === 'collection') {
-          return;
+          return eachDone();
         }
-        const root = page.slug.replace(`${projectSlug}-`, '');
-        page.inputPath = path.join(templatePath, `${root}.njk`);
-        page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
-            path.join(outputPath, page.slug.replace(`${projectSlug}-`, ''), 'index.html');
         async.autoInject({
-          mkdirs(done) {
+          paths(done) {
+            const root = page.slug.replace(`${projectSlug}-`, '');
+            page.inputPath = path.join(templatePath, `${root}.njk`);
+            page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
+                path.join(outputPath, page.slug.replace(`${projectSlug}-`, ''), 'index.html');
+            done();
+          },
+          mkdirs(paths, done) {
             if (page.outputPath === path.join(outputPath, 'index.html')) {
               mkdirp(outputPath, {}, done);
             } else {
