@@ -107,6 +107,9 @@ class PagedataRenderer {
       },
       renderAll(inputPaths, outputPaths, mkdirs, childPages, done) {
         async.eachSeries(childPages, (page, eachDone) => {
+          if (page.type === 'collection') {
+            return;
+          }
           render(page.inputPath, { content: page.content }, (err, htmlString) => {
             if (err) {
               return eachDone(err);
