@@ -100,46 +100,38 @@ class PagedataRenderer {
   renderAndSave(projectSlug, templatePath, outputPath, allDone) {
     const render = this.render.bind(this);
     const pagedata = this.pagedata;
-    async.autoInject({
-      childPages(done) {
-        pagedata.getPages({ projectSlug, populate: 'content' }, done);
-      },
-      inputPaths(childPages, done) {
-        objoin(childPages, { key: 'slug', set: 'inputPath' }, (slug, next) => {
-          const root = slug.replace(`${projectSlug}-`, '');
-          const templateFile = path.join(templatePath, `${root}.njk`);
-          return next(null, templateFile);
-        }, done);
-      },
-      outputPaths(childPages, done) {
-        objoin(childPages, { key: 'slug', set: 'outputPath' }, (slug, next) => {
-          const outputFile = (slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
-            path.join(outputPath, slug.replace(`${projectSlug}-`, ''), 'index.html');
-          return next(null, outputFile);
-        }, done);
-      },
-      mkdirs(outputPaths, childPages, done) {
-        async.eachSeries(childPages, (page, eachDone) => {
-          if (page.outputPath === path.join(outputPath, 'index.html')) {
-            return mkdirp(outputPath, {}, eachDone);
-          }
-          mkdirp(path.dirname(page.outputPath), {}, eachDone);
-        }, done);
-      },
-      renderAll(inputPaths, outputPaths, mkdirs, childPages, done) {
-        async.eachSeries(childPages, (page, eachDone) => {
-          if (page.type === 'collection') {
-            return;
-          }
-          render(page.inputPath, { content: page.content }, (err, htmlString) => {
-            if (err) {
-              return eachDone(err);
+    pagedata.getPages({ projectSlug, populate: 'content' }, (err, childPages) => {
+      if (err) {
+        return allDone(err);
+      }
+      async.eachSeries(childPages, (page, eachDone) => {
+        // skip collections for now:
+        if (page.type === 'collection') {
+          return;
+        }
+        const root = page.slug.replace(`${projectSlug}-`, '');
+        page.inputPath = path.join(templatePath, `${root}.njk`);
+        page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
+            path.join(outputPath, page.slug.replace(`${projectSlug}-`, ''), 'index.html');
+        async.autoInject({
+          mkdirs(done) {
+            if (page.outputPath === path.join(outputPath, 'index.html')) {
+              mkdirp(outputPath, {}, done);
+            } else {
+              mkdirp(path.dirname(page.outputPath), {}, done);
             }
-            fs.writeFile(page.outputPath, htmlString, eachDone);
-          });
-        }, done);
-      },
-    }, allDone);
+          },
+          renderAll(mkdirs, done) {
+            render(page.inputPath, { content: page.content }, (renderErr, htmlString) => {
+              if (renderErr) {
+                return done(renderErr);
+              }
+              fs.writeFile(page.outputPath, htmlString, done);
+            });
+          },
+        }, eachDone);
+      }, allDone);
+    });
   }
 }
 
