@@ -132,3 +132,54 @@ tap.test('renderAndSave', (t) => {
     }
   }, t.end);
 });
+
+tap.test('fetch with common', (t) => {
+  const pr = new PagedataRenderer('apiKey', {
+    path: __dirname,
+    host: 'http://localhost:8081',
+    common: {
+      header: 'site-header'
+    }
+  });
+  async.autoInject({
+    server(done) {
+      const server = new Hapi.Server();
+      server.connection({
+        host: 'localhost',
+        port: 8081
+      });
+      server.route({
+        path: '/api/pages/page-slug',
+        method: 'get',
+        handler(request, reply) {
+          return reply(null, { content: { text: 'Hello World' } });
+        }
+      });
+      server.route({
+        path: '/api/pages/site-header',
+        method: 'get',
+        handler(request, reply) {
+          return reply(null, { content: { logo: 'awesome' } });
+        }
+      });
+      server.start(() => done(null, server));
+    },
+    call(server, done) {
+      pr.fetch('page-slug', (err, result) => {
+        t.equal(err, null);
+        t.deepEqual(result, {
+          header: {
+            logo: 'awesome'
+          },
+          content: {
+            text: 'Hello World'
+          }
+        });
+        done();
+      });
+    },
+    stop(server, call, done) {
+      server.stop(done);
+    }
+  }, t.end);
+});

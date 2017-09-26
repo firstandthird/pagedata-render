@@ -34,15 +34,30 @@ class PagedataRenderer {
     });
   }
 
+  fetch(pageSlug, allDone) {
+    const map = Object.assign({}, this.options.common || {});
+    if (pageSlug) {
+      map.content = pageSlug;
+    }
+    async.mapValues(map, (value, key, next) => {
+      this.pagedata.getPage(value, (err, pageData) => {
+        if (err) {
+          return next(err);
+        }
+        next(null, pageData.content);
+      });
+    }, allDone);
+  }
+
   renderPage(pageSlug, templateFile, allDone) {
     const render = this.render.bind(this);
-    const pagedata = this.pagedata;
+    const fetch = this.fetch.bind(this);
     async.autoInject({
-      page(done) {
-        pagedata.getPage(pageSlug, done);
+      data(done) {
+        fetch(pageSlug, done);
       },
-      render(page, done) {
-        render(templateFile, { content: page.content }, done);
+      render(data, done) {
+        render(templateFile, data, done);
       },
     }, (err, result) => {
       if (err) {
@@ -55,13 +70,19 @@ class PagedataRenderer {
   renderCollection(collectionSlug, templateFile, allDone) {
     const render = this.render.bind(this);
     const pagedata = this.pagedata;
+    const fetch = this.fetch.bind(this);
     async.autoInject({
+      commonData(done) {
+        fetch(null, done);
+      },
       childPages(done) {
         pagedata.getPages({ parentPageSlug: collectionSlug, populate: 'content' }, done);
       },
-      renderAll(childPages, done) {
+      renderAll(childPages, commonData, done) {
         objoin(childPages, { key: 'content', set: 'html' }, (content, next) => {
-          render(templateFile, { content }, next);
+          const data = Object.assign({}, commonData);
+          data.content = content;
+          render(templateFile, data, next);
         }, done);
       },
     }, (err, result) => {
