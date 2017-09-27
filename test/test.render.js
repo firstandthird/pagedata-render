@@ -4,6 +4,7 @@ const path = require('path');
 const async = require('async');
 const Hapi = require('hapi');
 const PageData = require('pagedata');
+const fs = require('fs');
 
 const templateFile = path.join(__dirname, 'fixture', 'page1.njk');
 
@@ -177,7 +178,6 @@ tap.test('renderPage', (t) => {
   }, t.end);
 });
 
-
 tap.test('renderCollection', (t) => {
   const pr = new PagedataRenderer('apiKey', { path: __dirname, host: 'http://localhost:8081' });
   async.autoInject({
@@ -297,6 +297,45 @@ tap.test('renderCollection with common', (t) => {
         t.notEqual(result['page2-slug'].indexOf('awesomeHello World 2'), -1);
         done();
       });
+    },
+    stop(server, call, done) {
+      server.stop(done);
+    }
+  }, t.end);
+});
+
+tap.test('renderAndSave', (t) => {
+  const pr = new PagedataRenderer('apiKey', { path: __dirname, host: 'http://localhost:8081' });
+  async.autoInject({
+    server(done) {
+      const server = new Hapi.Server();
+      server.connection({
+        host: 'localhost',
+        port: 8081
+      });
+      server.route({
+        path: '/api/pages',
+        method: 'get',
+        handler(request, reply) {
+          return reply(null, [
+            { slug: 'project-one-page-one-slug', content: { text: 'page-one' } },
+            { slug: 'project-one-page-two-slug', content: { text: 'page-two' } },
+            { slug: 'project-one-homepage', content: { text: 'homepage' } },
+          ]);
+        }
+      });
+      server.start(() => done(null, server));
+    },
+    call(server, done) {
+      const templatePath = path.join(__dirname, 'fixture');
+      const outputPath = path.join(__dirname, 'output');
+      pr.renderAndSave('project-one', templatePath, outputPath, done);
+    },
+    verify(call, done) {
+      t.equal(fs.existsSync(path.join(__dirname, 'output', 'page-one-slug', 'index.html')), true, 'creates index.html in page sub-directory');
+      t.equal(fs.existsSync(path.join(__dirname, 'output', 'page-two-slug', 'index.html')), true, 'creates index.html in page sub-directory');
+      t.equal(fs.existsSync(path.join(__dirname, 'output', 'index.html')), true, 'creates homepage in output/index.html');
+      done();
     },
     stop(server, call, done) {
       server.stop(done);

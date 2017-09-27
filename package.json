@@ -17,6 +17,7 @@
   "homepage": "https://github.com/firstandthird/pagedata-render#readme",
   "dependencies": {
     "async": "^2.5.0",
+    "mkdirp": "^0.5.1",
     "nunjucks": "^3.0.1",
     "objoin": "^0.3.0",
     "pagedata": "^2.0.0"
