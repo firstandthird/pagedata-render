@@ -104,7 +104,7 @@ class PagedataRenderer {
       if (err) {
         return allDone(err);
       }
-      async.eachSeries(childPages, (page, eachDone) => {
+      async.each(childPages, (page, eachDone) => {
         // skip collections for now:
         if (page.type === 'collection') {
           return eachDone();
