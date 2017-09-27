@@ -3,6 +3,8 @@ const async = require('async');
 const fs = require('fs');
 const PageData = require('pagedata');
 const objoin = require('objoin');
+const path = require('path');
+const mkdirp = require('mkdirp');
 
 class PagedataRenderer {
   constructor(key, options) {
@@ -92,6 +94,46 @@ class PagedataRenderer {
         reduction[page.slug] = page.html;
       });
       return allDone(null, reduction);
+    });
+  }
+
+  renderAndSave(projectSlug, templatePath, outputPath, allDone) {
+    const render = this.render.bind(this);
+    const pagedata = this.pagedata;
+    pagedata.getPages({ projectSlug, populate: 'content' }, (err, childPages) => {
+      if (err) {
+        return allDone(err);
+      }
+      async.each(childPages, (page, eachDone) => {
+        // skip collections for now:
+        if (page.type === 'collection') {
+          return eachDone();
+        }
+        async.autoInject({
+          paths(done) {
+            const root = page.slug.replace(`${projectSlug}-`, '');
+            page.inputPath = path.join(templatePath, `${root}.njk`);
+            page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
+                path.join(outputPath, page.slug.replace(`${projectSlug}-`, ''), 'index.html');
+            done();
+          },
+          mkdirs(paths, done) {
+            if (page.outputPath === path.join(outputPath, 'index.html')) {
+              mkdirp(outputPath, {}, done);
+            } else {
+              mkdirp(path.dirname(page.outputPath), {}, done);
+            }
+          },
+          renderAll(mkdirs, done) {
+            render(page.inputPath, { content: page.content }, (renderErr, htmlString) => {
+              if (renderErr) {
+                return done(renderErr);
+              }
+              fs.writeFile(page.outputPath, htmlString, done);
+            });
+          },
+        }, eachDone);
+      }, allDone);
     });
   }
 }
