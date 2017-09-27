@@ -9,7 +9,7 @@ class PagedataRenderer {
     this.options = options;
     this.userAgent = options.userAgent || `pagedataRenderer/${require('./package.json').version}`;
     this.pagedata = new PageData(options.host, key, this.userAgent);
-    this.status = options.status || false;
+    this.status = options.status || 'draft';
   }
 
   render(filePath, data, allDone) {
@@ -38,9 +38,9 @@ class PagedataRenderer {
     if (pageSlug) {
       map.content = pageSlug;
     }
-    const options = this.options;
+    const status = this.status;
     async.mapValues(map, (value, key, next) => {
-      this.pagedata.getPage(value, { status: options.status }, (err, pageData) => {
+      this.pagedata.getPage(value, { status }, (err, pageData) => {
         if (err) {
           return next(err);
         }
@@ -71,13 +71,13 @@ class PagedataRenderer {
     const render = this.render.bind(this);
     const pagedata = this.pagedata;
     const fetch = this.fetch.bind(this);
-    const options = this.options;
+    const status = this.status;
     async.autoInject({
       commonData(done) {
         fetch(null, done);
       },
       childPages(done) {
-        pagedata.getPages({ parentPageSlug: collectionSlug, populate: 'content', status: options.status }, done);
+        pagedata.getPages({ parentPageSlug: collectionSlug, populate: 'content', status }, done);
       },
       renderAll(childPages, commonData, done) {
         objoin(childPages, { key: 'content', set: 'html' }, (content, next) => {
