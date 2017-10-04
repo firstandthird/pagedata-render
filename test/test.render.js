@@ -342,3 +342,40 @@ tap.test('renderAndSave', (t) => {
     }
   }, t.end);
 });
+
+tap.test('renderAndSave skip missing templates', (t) => {
+  const pr = new PagedataRenderer('apiKey', { path: __dirname, host: 'http://localhost:8081' });
+  async.autoInject({
+    server(done) {
+      const server = new Hapi.Server();
+      server.connection({
+        host: 'localhost',
+        port: 8081
+      });
+      server.route({
+        path: '/api/pages',
+        method: 'get',
+        handler(request, reply) {
+          return reply(null, [
+            { slug: 'project-one-page-unicorn', content: { text: 'unicorn' } },
+            { slug: 'project-one-page-chupacabra', content: { text: 'chupacabra' } },
+            { slug: 'project-one-homepage', content: { text: 'homepage' } },
+          ]);
+        }
+      });
+      server.start(() => done(null, server));
+    },
+    call(server, done) {
+      const templatePath = path.join(__dirname, 'fixture');
+      const outputPath = path.join(__dirname, 'output');
+      pr.renderAndSave('project-one', templatePath, outputPath, done);
+    },
+    verify(call, done) {
+      t.equal(fs.existsSync(path.join(__dirname, 'output', 'index.html')), true, 'creates homepage in output/index.html');
+      done();
+    },
+    stop(server, call, done) {
+      server.stop(done);
+    }
+  }, t.end);
+});
