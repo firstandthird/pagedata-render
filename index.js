@@ -130,7 +130,8 @@ class PagedataRenderer {
           renderAll(mkdirs, done) {
             render(page.inputPath, { content: page.content }, (renderErr, htmlString) => {
               if (renderErr) {
-                return done(renderErr);
+                console.log(renderErr);
+                return done();
               }
               fs.writeFile(page.outputPath, htmlString, done);
             });
