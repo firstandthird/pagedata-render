@@ -102,43 +102,57 @@ class PagedataRenderer {
 
   renderAndSave(projectSlug, templatePath, outputPath, allDone) {
     const render = this.render.bind(this);
+    const fetch = this.fetch.bind(this);
     const pagedata = this.pagedata;
-    pagedata.getPages({ projectSlug, populate: 'content' }, (err, childPages) => {
-      if (err) {
-        return allDone(err);
-      }
-      async.each(childPages, (page, eachDone) => {
-        // skip collections for now:
-        if (page.type === 'collection') {
-          return eachDone();
-        }
-        async.autoInject({
-          paths(done) {
-            const root = page.slug.replace(`${projectSlug}-`, '');
-            page.inputPath = path.join(templatePath, `${root}.njk`);
-            page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
+    async.autoInject({
+      common(done) {
+        fetch(null, done);
+      },
+      childPages(done) {
+        pagedata.getPages({ projectSlug, populate: 'content' }, done);
+      },
+      render(childPages, common, renderDone) {
+        console.log(common);
+        async.each(childPages, (page, eachDone) => {
+          // skip collections for now:
+          if (page.type === 'collection') {
+            return eachDone();
+          }
+          async.autoInject({
+            paths(done) {
+              const root = page.slug.replace(`${projectSlug}-`, '');
+              page.inputPath = path.join(templatePath, `${root}.njk`);
+              page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
                 path.join(outputPath, page.slug.replace(`${projectSlug}-`, ''), 'index.html');
-            done();
-          },
-          mkdirs(paths, done) {
-            if (page.outputPath === path.join(outputPath, 'index.html')) {
-              mkdirp(outputPath, {}, done);
-            } else {
+              done();
+            },
+            mkdirs(paths, done) {
+              if (page.outputPath === path.join(outputPath, 'index.html')) {
+                return mkdirp(outputPath, {}, done);
+              }
               mkdirp(path.dirname(page.outputPath), {}, done);
-            }
-          },
-          renderAll(mkdirs, done) {
-            render(page.inputPath, { content: page.content }, (renderErr, htmlString) => {
-              if (renderErr) {
-                console.log(renderErr);
+            },
+            html(mkdirs, done) {
+              const data = Object.assign({}, common);
+              data.content = page.content;
+              render(page.inputPath, data, (renderErr, html) => {
+                if (renderErr) {
+                  console.log(renderErr);
+                  return done();
+                }
+                done(null, html);
+              });
+            },
+            write(html, done) {
+              if (!html) {
                 return done();
               }
-              fs.writeFile(page.outputPath, htmlString, done);
-            });
-          },
-        }, eachDone);
-      }, allDone);
-    });
+              fs.writeFile(page.outputPath, html, done);
+            }
+          }, eachDone);
+        }, renderDone);
+      }
+    }, allDone);
   }
 }
 
