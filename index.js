@@ -59,6 +59,7 @@ class PagedataRenderer {
         fetch(pageSlug, done);
       },
       render(data, done) {
+        data.pageSlug = pageSlug;
         render(templateFile, data, done);
       },
     }, (err, result) => {
@@ -85,6 +86,7 @@ class PagedataRenderer {
         objoin(childPages, { key: 'content', set: 'html' }, (content, next) => {
           const data = Object.assign({}, commonData);
           data.content = content;
+          data.collectionSlug = collectionSlug;
           render(templateFile, data, next);
         }, done);
       },
@@ -112,18 +114,19 @@ class PagedataRenderer {
         pagedata.getPages({ projectSlug, populate: 'content' }, done);
       },
       render(childPages, common, renderDone) {
-        console.log(common);
         async.each(childPages, (page, eachDone) => {
           // skip collections for now:
           if (page.type === 'collection') {
             return eachDone();
           }
           async.autoInject({
-            paths(done) {
+            pageSlug(done) {
               const root = page.slug.replace(`${projectSlug}-`, '');
-              page.inputPath = path.join(templatePath, `${root}.njk`);
-              page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') :
-                path.join(outputPath, page.slug.replace(`${projectSlug}-`, ''), 'index.html');
+              done(null, root);
+            },
+            paths(pageSlug, done) {
+              page.inputPath = path.join(templatePath, `${pageSlug}.njk`);
+              page.outputPath = (page.slug === `${projectSlug}-homepage`) ? path.join(outputPath, 'index.html') : path.join(outputPath, pageSlug, 'index.html');
               done();
             },
             mkdirs(paths, done) {
@@ -132,9 +135,11 @@ class PagedataRenderer {
               }
               mkdirp(path.dirname(page.outputPath), {}, done);
             },
-            html(mkdirs, done) {
+            html(mkdirs, pageSlug, done) {
               const data = Object.assign({}, common);
               data.content = page.content;
+              data.pageSlug = pageSlug;
+              data.projectSlug = projectSlug;
               render(page.inputPath, data, (renderErr, html) => {
                 if (renderErr) {
                   console.log(renderErr);
