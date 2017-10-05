@@ -1,6 +1,6 @@
 {
   "name": "pagedata-render",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Render pagedata data as pages",
   "scripts": {
     "test": "tap test/test.*"
