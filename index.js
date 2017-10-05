@@ -138,7 +138,7 @@ class PagedataRenderer {
             html(mkdirs, pageSlug, done) {
               const data = Object.assign({}, common);
               data.content = page.content;
-              data.pageSlug = pageSlug;
+              data.pageSlug = page.slug;
               data.projectSlug = projectSlug;
               render(page.inputPath, data, (renderErr, html) => {
                 if (renderErr) {
